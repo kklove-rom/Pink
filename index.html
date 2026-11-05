@@ -79,6 +79,7 @@ nav button.on{color:var(--p)}
 .amt{font-size:12px;font-weight:700;color:#000}
 
 /* ===== 账户管理：长按排序 / 多选删除 ===== */
+.item{user-select:none;-webkit-user-select:none;touch-action:manipulation;cursor:pointer}
 .acts{display:flex;gap:10px}
 .ib{position:relative;transition:transform .15s}
 .ib:active{transform:scale(.92)}
@@ -160,7 +161,7 @@ nav button.on{color:var(--p)}
 .d-head .t b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .d-head .t span{font-size:12px;color:#9a9aa2}
 .d-x{border:0;background:#f2f2f4;color:#9a9aa2;width:32px;height:32px;border-radius:50%;font-size:12px;cursor:pointer;flex-shrink:0}
-.d-amt{font-size:12px;font-weight:700;color:#f4a3bf;margin:0 12px 0 8px;white-space:nowrap}
+.d-amt{font-size:12px;font-weight:700;color:#2b2b2e;margin:0 12px 0 8px;white-space:nowrap}
 .d-left{display:flex;align-items:baseline;justify-content:space-between;margin:4px 2px 8px}
 .d-left small{font-size:12px;color:#9a9aa2}
 .d-left strong{font-size:12px;font-weight:700;color:#f4a3bf}
@@ -174,11 +175,11 @@ nav button.on{color:var(--p)}
 .logs{margin-bottom:16px}
 .logs .lh{font-size:12px;color:#9a9aa2;margin-bottom:8px}
 .logs .li{display:flex;justify-content:space-between;font-size:12px;padding:9px 2px;border-bottom:1px solid #f4f4f6}
-.logs .li b{color:#f4a3bf}
+.logs .li b{color:#2b2b2e}
 .logs .box{max-height:110px;overflow-y:auto}
 .dep{display:flex;align-items:center;border:1px solid #f0f0f2;border-radius:16px;padding:10px 14px;margin-bottom:12px;background:#fff8fa}
 .dep span{font-size:12px;color:#9a9aa2;margin-right:6px}
-.dep input{border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:#f4a3bf;width:100%;outline:none}
+.dep input{border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:#2b2b2e;width:100%;outline:none}
 .dep input::placeholder{color:#e3c9d3;font-weight:600}
 .banner{position:absolute;left:50%;top:calc(20px + env(safe-area-inset-top,0px));transform:translateX(-50%) translateY(-16px);max-width:calc(100% - 28px);background:#fff;color:#2b2b2e;border:1px solid #e9e9ec;border-radius:22px;padding:12px 20px;font-size:12px;font-weight:600;box-shadow:0 12px 30px -10px rgba(0,0,0,.18);z-index:60;opacity:0;transition:.35s;pointer-events:none;white-space:nowrap}
 .banner.on{opacity:1;transform:translateX(-50%)}
@@ -251,9 +252,13 @@ function render(){
    m.innerHTML=`<div class="top"><button class="back" id="bk">${ic('back')}</button><h2>${esc(a.name)}</h2><b>${fmt(sum(a))}</b></div>`+
    years.map(y=>{const g=byYear[y],s=sumItems(g);
     return `<div class="yr"><div class="year-head open"><div class="year-left"><span class="fold">▸</span><span class="year">${y}</span></div><span class="total">${fmt(s)}</span></div><div class="items">`+
-    g.map((i,idx)=>`<div class="item${idx===g.length-1?' last':''}"><div class="item-left"><span class="mon">/${String(i.m).padStart(2,'0')}</span><span class="note">${i.note?esc(i.note):''}</span></div><span class="amt">${fmt(i.amt)}</span></div>`).join('')+`</div></div>`}).join('');
+    g.map((i,idx)=>`<div class="item${idx===g.length-1?' last':''}" data-id="${i.id}"><div class="item-left"><span class="mon">/${String(i.m).padStart(2,'0')}</span><span class="note">${i.note?esc(i.note):''}</span></div><span class="amt">${fmt(i.amt)}</span></div>`).join('')+`</div></div>`}).join('');
    $('#bk').onclick=()=>{cur=null;render()};
    m.querySelectorAll('.year-head').forEach(h=>h.onclick=()=>h.classList.toggle('open'));
+   m.querySelectorAll('.item').forEach(el=>{let lt=0;el.onclick=()=>{
+    const n=Date.now();
+    if(n-lt<400){lt=0;const it=a.items.find(x=>x.id===el.dataset.id);if(it)incomeSheet(a,it)}else lt=n;
+   }});
    fab.innerHTML=ic('plus');fab.style.display='grid';fab.onclick=()=>incomeSheet(a);
   }else{
    const tot=r2(D.accounts.reduce((t,a)=>t+cents(sum(a)),0)/100);
@@ -391,11 +396,15 @@ $('#mask').onclick=e=>{if(e.target.id==='mask')close()};
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
 function accSheet(){open(`<input id="an" placeholder="账户名称"><button class="btn" id="ok">确定</button>`);
  $('#ok').onclick=()=>{const n=$('#an').value.trim();if(!n)return;D.accounts.push({id:uid(),name:n,items:[],created:Date.now()});save();close();render()}}
-function incomeSheet(a){const d=new Date();let y=d.getFullYear(),mo=d.getMonth()+1;
- open(`<i class="hd"></i><div class="big"><b>¥</b><input id="ia" type="number" inputmode="decimal" placeholder="0.00"></div><div class="ys"><button id="yp">${ic('back')}</button><b id="yv">${y}</b><button id="yn" style="transform:scaleX(-1)">${ic('back')}</button></div><div class="mg">${Array.from({length:12},(_,i)=>`<button data-m="${i+1}" class="${i+1===mo?'on':''}">${i+1}月</button>`).join('')}</div><input id="in" placeholder="备注"><button class="btn" id="ok">确定</button>`);
+function incomeSheet(a,it){const d=new Date();let y=it?it.y:d.getFullYear(),mo=it?it.m:d.getMonth()+1;
+ open(`<i class="hd"></i><div class="big"><b>¥</b><input id="ia" type="number" inputmode="decimal" placeholder="0.00" value="${it?it.amt:''}"></div><div class="ys"><button id="yp">${ic('back')}</button><b id="yv">${y}</b><button id="yn" style="transform:scaleX(-1)">${ic('back')}</button></div><div class="mg">${Array.from({length:12},(_,i)=>`<button data-m="${i+1}" class="${i+1===mo?'on':''}">${i+1}月</button>`).join('')}</div><input id="in" placeholder="备注" value="${it?esc(it.note||''):''}">${it?`<div class="two"><button class="btn" id="bk2" style="background:var(--l);color:var(--t);flex:1">返回</button><button class="btn" id="ok" style="flex:1">确定修改</button></div>`:'<button class="btn" id="ok">确定</button>'}`);
+ if(it)$('#bk2').onclick=close;
  const yv=$('#yv');$('#yp').onclick=()=>yv.textContent=--y;$('#yn').onclick=()=>yv.textContent=++y;
  document.querySelectorAll('.mg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.mg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');mo=+b.dataset.m});
- $('#ok').onclick=()=>{const v=parseFloat($('#ia').value);if(!(v>0))return;a.items.unshift({id:uid(),amt:r2(v),y,m:mo,note:$('#in').value.trim()});save();close();render()}}
+ $('#ok').onclick=()=>{const v=parseFloat($('#ia').value);if(!(v>0))return;
+  if(it){it.amt=r2(v);it.y=y;it.m=mo;it.note=$('#in').value.trim()}
+  else a.items.unshift({id:uid(),amt:r2(v),y,m:mo,note:$('#in').value.trim()});
+  save();close();render()}}
 function profSheet(){open(`<input id="pn" placeholder="昵称" value="${esc(D.profile.name)}"><input id="pb" placeholder="签名" value="${esc(D.profile.bio)}"><button class="btn" id="ok">确定</button>`);
  $('#ok').onclick=()=>{D.profile.name=$('#pn').value.trim();D.profile.bio=$('#pb').value.trim();save();close();render()}}
 let target='';
