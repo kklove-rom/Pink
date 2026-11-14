@@ -198,10 +198,13 @@ nav button.on{color:var(--p)}
 .a-sum:active,.a-sum.tapped{opacity:.6;transform:scale(.985)}
 .a-cnt{margin-top:5px;text-align:center;font-size:12px;line-height:1.5;color:var(--g)}
 .a-list{flex:1 1 auto;min-height:80px;max-height:44vh;overflow-y:auto;overflow-x:hidden;margin-top:14px;border-top:1px solid var(--l);overscroll-behavior:contain}
-.a-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-bottom:1px solid var(--l)}
-.a-row:last-child{border-bottom:none}
+.a-swipe{position:relative;overflow:hidden;background:#ff6b81;border-bottom:1px solid var(--l)}
+.a-swipe:last-child{border-bottom:none}
+.a-swipe .a-del{position:absolute;top:0;right:0;bottom:0;width:80px;border:0;background:#ff6b81;color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.a-row{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-bottom:0;background:#fff;transition:transform .2s;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.a-row.drag{transition:none}
 .a-row .a-note{font-size:15px;line-height:1.4;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.a-row .a-amt{flex:0 0 auto;font-size:15px;font-weight:600;line-height:1.4;font-variant-numeric:tabular-nums;cursor:pointer;border-radius:8px;padding:2px 4px;margin:-2px -2px;transition:background .15s,transform .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.a-row .a-amt{flex:0 0 auto;font-size:15px;font-weight:600;line-height:1.4;font-variant-numeric:tabular-nums;cursor:pointer;border-radius:8px;padding:2px 4px;margin:-2px -2px;transition:background .15s,transform .15s;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .a-row .a-amt:hover{background:var(--p3)}
 .a-row .a-amt:active,.a-row .a-amt.tapped{background:var(--p2);transform:scale(.98)}
 .a-empty{padding:30px 10px;text-align:center;font-size:12px;line-height:1.6;color:var(--g)}
@@ -224,6 +227,6 @@ nav button.on{color:var(--p)}
 .sync-row.on .sync-radio{border-color:var(--p);background:var(--p);box-shadow:inset 0 0 0 3px #fff}
 .sync-preview{margin-top:10px;text-align:center;font-size:12px;line-height:1.5;color:var(--g);font-variant-numeric:tabular-nums}
 .sync-preview b{font-weight:600;color:var(--t)}
-.sync-actions{margin-top:16px}
-.sync-actions .btn{flex:1}
+.sync-actions{margin-top:16px;display:flex;gap:10px}
+.sync-actions .btn{flex:1;min-width:0;font-size:13px;padding:13px 6px;white-space:nowrap}
 .sync-empty{padding:22px 8px;text-align:center;font-size:12px;line-height:1.6;color:var(--g);border-bottom:1px solid var(--l)}

@@ -457,11 +457,11 @@ function renderSyncAccounts(){
  const cur=monthIncomeOf(a);
  pv.innerHTML=esc(a.name)+' 本月收入 <b>'+fmt(cur)+'</b> → <b>'+fmt(r2(cur+w2pending.amount))+'</b>';
 }
-function confirmWishDeposit(){
+function confirmWishDeposit(skipAccount){
  const x=D.wishes.find(o=>o.id===(w2pending&&w2pending.id));
  if(!x||!w2pending)return;
  const v=w2pending.amount;
- const acc=D.accounts.find(a=>a.id===syncAcc)||null;
+ const acc=skipAccount?null:(D.accounts.find(a=>a.id===syncAcc)||null);
  x.saved=(cents(x.saved)+cents(v))/100;
  const d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
  if(acc){acc.items.unshift({id:uid(),amt:r2(v),y,m,note:'心愿单存入 · '+x.name})}
@@ -474,14 +474,15 @@ function confirmWishDeposit(){
  w2closeDrawer();
  render();
  if(done){toast('哇塞你好厉害，已将此物收入囊中!');w2banner()}
- else{w2openDrawer(x.id);toast(acc?'已存入 '+fmt(v)+'，已同步至 '+acc.name:'已存入 '+fmt(v))}
+ else{w2openDrawer(x.id);toast(skipAccount&&D.accounts.length?'已存入 '+fmt(v)+'，未计入账户':(acc?'已存入 '+fmt(v)+'，已同步至 '+acc.name:'已存入 '+fmt(v)))}
 }
 w2$('syncList').onclick=e=>{
  const b=e.target.closest('[data-sync]');if(!b)return;
  syncAcc=b.dataset.sync;renderSyncAccounts();
 };
 w2$('syncCancel').onclick=()=>{w2pending=null;closeSyncSheet()};
-w2$('syncOk').onclick=confirmWishDeposit;
+w2$('syncSkip').onclick=()=>confirmWishDeposit(true);
+w2$('syncOk').onclick=()=>confirmWishDeposit(false);
 w2$('syncMask').onclick=e=>{if(e.target.id==='syncMask'){w2pending=null;closeSyncSheet()}};
 w2$('dmask').onclick=e=>{if(e.target.id==='dmask')w2closeDrawer()};
 
@@ -512,7 +513,7 @@ function w2openForm(){
 }
 
 /* ===================== 弹窗A：月份收入明细 ===================== */
-let aCtx=null,aEditTap=0,aEditEl=null;
+let aCtx=null,aEditTap=0,aEditEl=null,aOpenRow=null;
 function monthRecordsOf(a,y,m){return a.items.filter(i=>i.y===y&&i.m===m)}
 function openMonthSheet(a,y,m){
  aCtx={accId:a.id,y,m};
@@ -523,12 +524,14 @@ function openMonthSheet(a,y,m){
 }
 function closeMonthSheet(){
  const mask=w2$('aMask');if(!mask)return;
+ if(aOpenRow){aOpenRow.style.transform='';aOpenRow._x=0;aOpenRow=null}
  mask.classList.remove('on');
  mask.setAttribute('aria-hidden','true');
  aCtx=null;aEditTap=0;aEditEl=null;
 }
 function renderMonthSheet(){
  if(!aCtx)return;
+ aOpenRow=null;
  const a=D.accounts.find(x=>x.id===aCtx.accId);
  if(!a){closeMonthSheet();return}
  const y=aCtx.y,m=aCtx.m;
@@ -537,14 +540,67 @@ function renderMonthSheet(){
  w2$('aSum').textContent=fmt(sumItems(list));
  w2$('aCnt').textContent=list.length?'共 '+list.length+' 笔':'暂无记录';
  w2$('aList').innerHTML=list.length
-  ?list.map(i=>`<div class="a-row" data-id="${i.id}"><span class="a-note">${i.note?esc(i.note):'未备注'}</span><span class="a-amt" role="button" tabindex="0" title="双击修改" data-id="${i.id}">${fmt(i.amt)}</span></div>`).join('')
+  ?list.map(i=>`<div class="a-swipe" data-id="${i.id}"><button class="a-del" type="button" data-del="${i.id}">删除</button><div class="a-row" data-id="${i.id}"><span class="a-note">${i.note?esc(i.note):'未备注'}</span><span class="a-amt" role="button" tabindex="0" title="双击修改" data-id="${i.id}">${fmt(i.amt)}</span></div></div>`).join('')
   :'<div class="a-empty">这个月还没有收入记录<br>双击上方金额记一笔</div>';
+ w2$('aList').querySelectorAll('.a-row').forEach(aBindSwipe);
 }
 function openMonthIncome(){
  if(!aCtx)return;
  const a=D.accounts.find(x=>x.id===aCtx.accId);if(!a)return;
  incomeSheet(a,null,{y:aCtx.y,m:aCtx.m,month:true});
 }
+/* 左滑删除明细 */
+const A_SWIPE_W=80;
+function aCloseOpenRow(){
+ if(aOpenRow){aOpenRow.style.transform='';aOpenRow._x=0;aOpenRow=null}
+}
+function aBindSwipe(row){
+ let sx=0,sy=0,base=0,moved=false,tracking=false,dir=null;
+ row._x=0;
+ row.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  tracking=true;moved=false;row._moved=false;dir=null;sx=e.clientX;sy=e.clientY;base=row._x||0;
+  if(aOpenRow&&aOpenRow!==row)aCloseOpenRow();
+ });
+ row.addEventListener('pointermove',e=>{
+  if(!tracking)return;
+  const dx=e.clientX-sx,dy=e.clientY-sy;
+  if(!dir){
+   if(Math.abs(dx)<6&&Math.abs(dy)<6)return;
+   dir=Math.abs(dx)>Math.abs(dy)?'h':'v';
+   if(dir==='h'){moved=true;row.classList.add('drag');try{row.setPointerCapture(e.pointerId)}catch(_){}}
+  }
+  if(dir!=='h')return;
+  row._x=Math.max(-A_SWIPE_W,Math.min(0,base+dx));
+  row.style.transform='translateX('+row._x+'px)';
+ });
+ const end=()=>{
+  if(!tracking)return;
+  tracking=false;row.classList.remove('drag');row._moved=moved;
+  if(!moved)return;
+  const open=row._x<-A_SWIPE_W/2;
+  row._x=open?-A_SWIPE_W:0;
+  row.style.transform=open?'translateX(-'+A_SWIPE_W+'px)':'';
+  aOpenRow=open?row:null;
+ };
+ row.addEventListener('pointerup',end);
+ row.addEventListener('pointercancel',end);
+}
+function deleteMonthItem(id){
+ if(!aCtx)return;
+ const a=D.accounts.find(x=>x.id===aCtx.accId);
+ if(!a)return;
+ const it=a.items.find(x=>x.id===id);
+ if(!it)return;
+ a.items=a.items.filter(x=>x.id!==id);
+ save();
+ render();
+ renderMonthSheet();
+ toast('已删除');
+}
+document.addEventListener('pointerdown',e=>{
+ if(aOpenRow&&!e.target.closest('.a-swipe'))aCloseOpenRow();
+});
 w2$('aBack').onclick=closeMonthSheet;
 w2$('aOk').onclick=closeMonthSheet;
 w2$('aMask').onclick=e=>{if(e.target.id==='aMask')closeMonthSheet()};
@@ -558,6 +614,13 @@ function openMonthEdit(row){
  incomeSheet(a,it,{y:it.y,m:it.m,month:true});
 }
 w2$('aList').addEventListener('click',e=>{
+ const del=e.target.closest('.a-del');
+ if(del){e.stopPropagation();deleteMonthItem(del.dataset.del);return}
+ const row=e.target.closest('.a-row');
+ if(row){
+  if(row._moved){row._moved=false;return}
+  if(row._x<0){row._x=0;row.style.transform='';if(aOpenRow===row)aOpenRow=null;return}
+ }
  const am=e.target.closest('.a-amt');
  if(!am)return;
  const n=Date.now();
